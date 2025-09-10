@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warframe LFG</title>
+    <!-- Add Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #1f2937; /* gray-800 */
+            color: white;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-white p-6">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">Warframe LFG</h1>
+        
+        <!-- Tabs for Categories -->
+        <div class="flex space-x-2 mb-6 flex-wrap">
+            {% for cat in categories %}
+            <a href="/?category={{ cat }}&platform={{ platform_filter }}&relic={{ relic_filter }}"
+               class="px-4 py-2 rounded-lg transition-colors mb-2
+                      {% if category_filter == cat and not show_mine %}bg-blue-600 text-white{% else %}bg-gray-700 hover:bg-gray-600 text-gray-200{% endif %}">
+               {{ cat }}
+            </a>
+            {% endfor %}
+            <a href="/?show_mine=true"
+               class="px-4 py-2 rounded-lg transition-colors mb-2
+                      {% if show_mine %}bg-purple-600 text-white{% else %}bg-gray-700 hover:bg-gray-600 text-gray-200{% endif %}">
+               Your Posts
+            </a>
+        </div>
+
+        <!-- Filters (only show when not viewing "Your Posts") -->
+        {% if not show_mine %}
+        <form method="GET" class="mb-6 flex gap-2">
+            <input type="hidden" name="category" value="{{ category_filter }}">
+            <select name="platform" class="p-2 text-black rounded">
+                <option {% if platform_filter == "All" %}selected{% endif %}>All</option>
+                <option {% if platform_filter == "PC" %}selected{% endif %}>PC</option>
+                <option {% if platform_filter == "PS" %}selected{% endif %}>PS</option>
+                <option {% if platform_filter == "Xbox" %}selected{% endif %}>Xbox</option>
+                <option {% if platform_filter == "Switch" %}selected{% endif %}>Switch</option>
+            </select>
+            <input type="text" name="relic" placeholder="Search relic (e.g. Axi C10)" 
+                   value="{{ relic_filter }}" class="p-2 text-black rounded">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white transition-colors">Filter</button>
+        </form>
+        {% endif %}
+
+        <!-- Add Post Form -->
+        <form action="/add" method="POST" class="mb-6 space-y-2 bg-gray-800 p-4 rounded-xl">
+            <div class="flex flex-wrap gap-2">
+                <select name="category" id="categorySelect" class="p-2 text-black rounded" onchange="toggleFormFields()">
+                    <option value="Relics">Relics</option>
+                    <option value="Archimedea">Archimedea</option>
+                    <option value="Netracells">Netracells</option>
+                    <option value="Eidolons">Eidolons</option>
+                    <option value="Steel Path">Steel Path</option>
+                    <option value="Endo">Endo</option>
+                    <option value="General Help">General Help</option>
+                    
+                </select>
+                <select name="platform" class="p-2 text-black rounded">
+                    <option>PC</option>
+                    <option>PS</option>
+                    <option>Xbox</option>
+                    <option>Switch</option>
+                </select>
+                
+                <!-- Relic input - shown for Relics category -->
+                <input type="text" name="relic" id="relicInput" placeholder="Which relic? (e.g. Axi C10)" class="p-2 text-black w-48 rounded">
+                
+                <!-- Description input - hidden for Relics category -->
+                <input type="text" name="description" id="descriptionInput" placeholder="What are you running?" class="p-2 text-black w-64 rounded">
+                
+                <input type="text" name="ign" placeholder="Your In-Game Name" class="p-2 text-black w-40 rounded" required>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white transition-colors">Post</button>
+            </div>
+        </form>
+
+        <script>
+        function toggleFormFields() {
+            const category = document.getElementById('categorySelect').value;
+            const relicInput = document.getElementById('relicInput');
+            const descriptionInput = document.getElementById('descriptionInput');
+            
+            if (category === 'Relics') {
+                // For Relics: show relic input, hide description
+                relicInput.style.display = 'block';
+                relicInput.required = true;
+                relicInput.placeholder = 'Which relic? (e.g. Axi C10)';
+                descriptionInput.style.display = 'none';
+                descriptionInput.required = false;
+                descriptionInput.value = ''; // Clear description when hidden
+            } else {
+                // For other categories: hide relic input, show description
+                relicInput.style.display = 'none';
+                relicInput.required = false;
+                relicInput.value = ''; // Clear relic when hidden
+                descriptionInput.style.display = 'block';
+                descriptionInput.required = true;
+            }
+        }
+        
+        // Initialize form on page load
+        toggleFormFields();
+        </script>
+
+        <!-- Posts -->
+        <div class="space-y-3">
+            {% if show_mine %}
+                <h2 class="text-xl font-semibold mb-4 text-purple-400">Your Posts</h2>
+                {% if posts|length == 0 %}
+                    <p class="text-gray-400">You haven't posted anything yet.</p>
+                {% endif %}
+            {% endif %}
+            
+            {% for post in posts %}
+            <div class="bg-gray-700 p-3 rounded-xl relative">
+                <p class="font-semibold">{{ post[1] }} ({{ post[2] }})</p>
+                {% if post[3] %}<p class="text-purple-400">Relic: {{ post[3] }}</p>{% endif %}
+                <p class="text-gray-200">{{ post[4] }}</p>
+                <p class="text-yellow-400">IGN: /w {{ post[5] }}</p>
+                
+                <!-- Debug info (remove this later) -->
+                {% if show_mine %}
+                <p class="text-xs text-gray-500">Post ID: {{ post[0] }} | User Session: {{ post[6] if post|length > 6 else 'N/A' }}</p>
+                {% endif %}
+                
+                <!-- Delete button for your own posts -->
+                {% if show_mine %}
+                <form action="/delete/{{ post[0] }}?show_mine=true" method="POST" class="absolute top-2 right-2" 
+                      onsubmit="return confirm('Are you sure you want to delete this post?')">
+                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm transition-colors">
+                        🗑️ Delete
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            {% if not show_mine and posts|length == 0 %}
+            <p class="text-gray-400">No posts found for this filter.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
