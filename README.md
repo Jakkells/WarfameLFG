@@ -1,0 +1,2 @@
+# WarfameLFG
+LFG for Warframe
